@@ -1,0 +1,20 @@
+{
+  "name": "live-learn-component",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "wrangler dev --ip 127.0.0.1 --port 8787",
+    "test": "playwright test",
+    "test:api": "node --test tests/acceptance.test.js",
+    "test:load": "node tests/load.js",
+    "test:local": "node tests/local.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "wrangler": "4.159.0"
+  }
+}

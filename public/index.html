@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en" data-type="software">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="page-type" content="software">
+  <meta name="site-kind" content="software">
+  <meta name="theme-color" content="#f5f4ed">
+  <meta name="description" content="Join your class with a PIN and paint on a shared pixel canvas.">
+  <title>Live Learn · Pixel Canvas</title>
+  <meta property="og:title" content="Live Learn · Pixel Canvas">
+  <meta property="og:description" content="Join your class with a PIN and paint on a shared pixel canvas.">
+  <meta property="og:image" content="https://live-learn-component.leekahhow.workers.dev/share.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header class="nav">
+    <div class="bar wrap">
+      <a class="skip" href="#main">Skip to activity</a>
+      <a class="brand" href="/"><img src="/icon.svg" alt="" width="28" height="28"> Live Learn</a>
+      <a class="source" href="https://github.com/String-sg/live-learn-component">Source on GitHub ↗</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" data-enter aria-label="Pixel Canvas">
+      <div class="wrap workspace">
+        <div class="controls">
+          <div id="entry">
+            <h1 id="title">Pixel <br>Canvas</h1>
+            <p class="intro">Pick a colour. Paint a square.<br>Build one picture with your class.</p>
+            <div class="roles" aria-label="Choose how to enter">
+              <button id="student-mode" type="button" aria-pressed="true">Student</button>
+              <button id="host-mode" type="button" aria-pressed="false">Host</button>
+            </div>
+            <form id="join">
+              <label for="pin">Room PIN</label>
+              <input id="pin" name="pin" inputmode="numeric" autocomplete="off" pattern="[0-9]{8}" maxlength="8" placeholder="8 digits" required>
+              <label for="nickname">Nickname</label>
+              <input id="nickname" name="nickname" autocomplete="off" maxlength="24" placeholder="Use a made-up name" required>
+              <button class="primary">Join room <span aria-hidden="true">↗</span></button>
+            </form>
+            <form id="login" hidden>
+              <label for="passphrase">Host passphrase</label>
+              <input id="passphrase" name="passphrase" type="password" autocomplete="current-password" required>
+              <button class="primary">Sign in <span aria-hidden="true">↗</span></button>
+            </form>
+            <div id="launcher" hidden>
+              <button class="primary" id="create" type="button">Create room <span aria-hidden="true">↗</span></button>
+              <button class="secondary" id="resume" type="button" hidden>Resume last room</button>
+              <button class="text-button" id="logout" type="button">Sign out</button>
+            </div>
+          </div>
+
+          <div id="session" hidden>
+            <p class="eyebrow" id="identity"></p>
+            <h1 id="room-title" tabindex="-1">Room<br><span id="room-pin"></span></h1>
+            <p class="intro" id="room-message" aria-live="polite"></p>
+            <div id="host-actions" hidden>
+              <button id="copy" class="secondary" type="button">Copy invite link</button>
+              <button id="start" class="primary" type="button">Start activity</button>
+              <button id="end" class="secondary" type="button">End room</button>
+            </div>
+            <button id="back" class="text-button" type="button">Back to entry</button>
+          </div>
+          <p id="notice" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="stage app-frame" data-visual>
+          <div class="stage-head">
+            <div class="board-label"><span class="signal" aria-hidden="true"></span><span id="stage-status">Sample canvas</span></div>
+            <span id="stage-detail">16 × 16</span>
+          </div>
+          <div class="board-wrap">
+            <div class="board" id="sample" aria-hidden="true"></div>
+            <div class="board" id="board" role="group" aria-label="Pixel canvas" aria-describedby="board-help" hidden></div>
+          </div>
+          <div class="stage-foot">
+            <div id="palette" aria-label="Paint colours" role="group"></div>
+            <p id="board-help" class="stage-help">One square at a time.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
