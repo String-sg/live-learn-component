@@ -1,6 +1,6 @@
 # 100-student preview rehearsal
 
-Run on 9 November 2026 SGT against the isolated Cloudflare preview, Worker version `dfa5ac58-829a-4255-bdb0-bd304782d10a`. The rehearsal used one synthetic host and 100 independent HTTP clients from a single Singapore test machine. Each client held its own guest cookie. Preview and production have separate Worker secrets and SQLite Durable Object namespaces.
+Run on 9 November 2026 SGT against the isolated Cloudflare preview, Worker version `dfa5ac58-829a-4255-bdb0-bd304782d10a`. The rehearsal used one synthetic host and 100 independent HTTP clients from one test runner. Each client held its own guest cookie. Preview and production have separate Worker secrets and SQLite Durable Object namespaces.
 
 | Measure | Observed | Acceptance target |
 | --- | ---: | ---: |
@@ -17,7 +17,7 @@ Run on 9 November 2026 SGT against the isolated Cloudflare preview, Worker versi
 
 All 100 students observed both transitions and verified the final canvas. The host saw final revision 502, matching 100 joins, Start, 400 unique paints and End. The runner recorded 19,703 HTTP responses, including 18,475 unchanged polls with empty bodies.
 
-This is one room, one network path and a foreground polling workload. Separate Chromium tests cover the browser flow on desktop and mobile viewports. The preview result measures the room API and does not measure browser rendering, background-tab timing, simultaneous rooms or maximum platform capacity.
+This is one room, one network path and a foreground polling workload. Separate Chromium tests cover the browser flow on desktop and mobile viewports.
 
 The implementation caps rooms at 120 guests, 30,000 unique paints and a two-hour lifetime. With this workload, one room used about 3,941 requests per minute. If deployed on Workers Free, the published 100,000 daily request quota corresponds to roughly 25 minutes at that rate if the account has no other Worker traffic. Durable Object usage also follows the hosting plan. [Worker limits](https://developers.cloudflare.com/workers/platform/limits/) · [Durable Object quotas](https://developers.cloudflare.com/durable-objects/platform/pricing/)
 
