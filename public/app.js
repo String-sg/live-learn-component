@@ -3,13 +3,6 @@ const colours = ['Erase', 'Lime', 'Coral', 'Sky', 'Lilac', 'Gold', 'Chalk']
 const stages = { waiting: 'Waiting room', live: 'Live activity', ended: 'Room ended' }
 const pinPattern = /^\d{8}$/
 
-const art = [
-  '0000000030000000', '0000000333000000', '0030000030000000', '0333000000000000',
-  '0030000000000200', '0000001110002220', '0000111111100200', '0001111111110000',
-  '0011111111111000', '0011101110111000', '0011101110111000', '0011111111111000',
-  '0001112002110000', '0000111221100000', '0000001110000000', '0000000000000000',
-].join('')
-
 let room
 let role = 'guest'
 let signedIn = false
@@ -25,11 +18,7 @@ function pixel(element, value) {
   element.style.setProperty('--pixel', `var(--c${value})`)
 }
 
-const cells = Array.from(art, (value, index) => {
-  const sample = document.createElement('span')
-  sample.className = 'pixel'
-  pixel(sample, value)
-  $('sample').append(sample)
+const cells = Array.from({ length: 256 }, (_, index) => {
   const cell = document.createElement('button')
   cell.type = 'button'
   cell.className = 'pixel'
@@ -93,9 +82,8 @@ function renderEntry() {
   $('board').hidden = true
   $('stage-status').textContent = 'Sample canvas'
   $('stage-detail').textContent = '16 × 16'
-  $('board-help').textContent = 'One square at a time.'
   $('board').closest('.stage').dataset.status = ''
-  $('palette').hidden = true
+  $('paint-tools').hidden = true
   $('student-mode').setAttribute('aria-pressed', String(role === 'guest'))
   $('host-mode').setAttribute('aria-pressed', String(role === 'host'))
   $('join').hidden = role !== 'guest'
@@ -128,8 +116,9 @@ function renderRoom() {
   $('start').hidden = room.status !== 'waiting'
   $('end').hidden = room.status === 'ended'
   const canPaint = room.status === 'live' && role === 'guest'
-  $('palette').hidden = !canPaint
-  $('board-help').textContent = canPaint ? 'Tap or use arrows and Enter.' : 'Shared canvas'
+  $('paint-tools').hidden = !canPaint
+  if (canPaint) $('board').setAttribute('aria-describedby', 'board-help')
+  else $('board').removeAttribute('aria-describedby')
   cells.forEach((cell, index) => {
     const value = room.pixels[index]
     if (cell.dataset.colour !== value) {

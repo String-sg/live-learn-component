@@ -22,6 +22,7 @@ test('a host and independent desktop and mobile students share and resume one ca
     pin = (await host.locator('#room-pin').innerText()).replace(' ', '')
 
     await first.goto('/')
+    await expect(first.locator('#sample')).toBeInViewport({ ratio: 1 })
     await first.getByLabel('Room PIN').fill(pin)
     await first.getByLabel('Nickname').fill('Ada')
     await first.getByRole('button', { name: 'Join room' }).tap()
@@ -36,9 +37,12 @@ test('a host and independent desktop and mobile students share and resume one ca
     await host.reload()
     await expect(host.getByRole('button', { name: 'Start activity' })).toBeVisible()
     await host.getByRole('button', { name: 'Start activity' }).click()
-    await expect(first.getByRole('button', { name: 'Sky', exact: true })).toBeVisible()
+    const mobileSwatch = first.getByRole('button', { name: 'Sky', exact: true })
+    await expect(mobileSwatch).toBeVisible()
+    const { width, height } = await mobileSwatch.boundingBox()
+    expect(Math.min(width, height)).toBeGreaterThanOrEqual(44)
     await expect(second.getByRole('button', { name: 'Coral', exact: true })).toBeVisible()
-    await first.getByRole('button', { name: 'Sky', exact: true }).tap()
+    await mobileSwatch.tap()
     await second.getByRole('button', { name: 'Coral', exact: true }).click()
     await Promise.all([
       first.getByRole('button', { name: 'Row 1, column 1, empty' }).tap(),

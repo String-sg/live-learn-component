@@ -25,22 +25,26 @@
     </div>
   </header>
 
-  <main id="main">
+  <main id="main" tabindex="-1">
     <section class="hero" data-enter aria-label="Pixel Canvas">
       <div class="wrap workspace">
         <div class="controls">
           <div id="entry">
             <h1 id="title">Pixel <br>Canvas</h1>
-            <p class="intro">Pick a colour. Paint a square.<br>Build one picture with your class.</p>
+            <p class="intro">Paint one picture with your class.</p>
             <div class="roles" aria-label="Choose how to enter">
               <button id="student-mode" type="button" aria-pressed="true">Student</button>
               <button id="host-mode" type="button" aria-pressed="false">Host</button>
             </div>
             <form id="join">
-              <label for="pin">Room PIN</label>
-              <input id="pin" name="pin" inputmode="numeric" autocomplete="off" pattern="[0-9]{8}" maxlength="8" placeholder="8 digits" required>
-              <label for="nickname">Nickname</label>
-              <input id="nickname" name="nickname" autocomplete="off" maxlength="24" placeholder="Use a made-up name" required>
+              <div>
+                <label for="pin">Room PIN</label>
+                <input id="pin" name="pin" inputmode="numeric" autocomplete="off" pattern="[0-9]{8}" maxlength="8" placeholder="8 digits" required>
+              </div>
+              <div>
+                <label for="nickname">Nickname</label>
+                <input id="nickname" name="nickname" autocomplete="off" maxlength="24" placeholder="Made-up name" required>
+              </div>
               <button class="primary">Join room <span aria-hidden="true">↗</span></button>
             </form>
             <form id="login" hidden>
@@ -74,13 +78,13 @@
             <div class="board-label"><span class="signal" aria-hidden="true"></span><span id="stage-status">Sample canvas</span></div>
             <span id="stage-detail">16 × 16</span>
           </div>
-          <div class="board-wrap">
-            <div class="board" id="sample" aria-hidden="true"></div>
-            <div class="board" id="board" role="group" aria-label="Pixel canvas" aria-describedby="board-help" hidden></div>
-          </div>
-          <div class="stage-foot">
+          <div id="paint-tools" hidden>
             <div id="palette" aria-label="Paint colours" role="group"></div>
-            <p id="board-help" class="stage-help">One square at a time.</p>
+            <p id="board-help" class="stage-help">Tap a square or use arrows and Enter.</p>
+          </div>
+          <div class="board-wrap">
+            <img id="sample" src="/sample.png" width="256" height="256" alt="A smiling face and stars drawn on a pixel canvas">
+            <div class="board" id="board" role="group" aria-label="Pixel canvas" hidden></div>
           </div>
         </div>
       </div>
