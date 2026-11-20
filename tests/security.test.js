@@ -86,3 +86,28 @@ test('rejects unsafe origins and malformed input without exposing credentials', 
     await host.request(path + '/end', {})
   }
 })
+
+test('bounds failed PIN guesses while allowing an existing member to resume', localOnly, async () => {
+  const host = await hostClient()
+  const { pin } = await host.request('/rooms', { requestId: crypto.randomUUID() })
+  const path = roomPath(pin)
+  const member = client()
+  const source = { 'CF-Connecting-IP': '192.0.2.43' }
+  try {
+    await member.request(path + '/join', joinBody('Resume'), 200, source)
+    // End gives a deterministic failed join without guessing any unrelated PIN.
+    await host.request(path + '/end', {})
+    await Promise.all(Array.from({ length: 30 }, () =>
+      client().request(path + '/join', joinBody(), 409, source)))
+    await client().request(path + '/join', joinBody(), 429, source)
+    const resumed = await member.request(path + '/join', joinBody('New name'), 200, source)
+    assert.equal(resumed.nickname, 'Resume')
+    assert.equal(resumed.status, 'ended')
+    assert.equal(resumed.guests, 1)
+    const ended = await host.request(path + '/end', {})
+    assert.equal(ended.revision, resumed.revision)
+    await host.request(path + '/start', {}, 409)
+  } finally {
+    await host.request(path + '/end', {})
+  }
+})

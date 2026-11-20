@@ -1,51 +1,9 @@
-import { cookie, loginHost, logoutHost, readCookie, readHost } from './host-auth.js'
+import { loginHost, logoutHost, readHost } from './host-auth.js'
+import { cookie, digest, fail, readCookie, readJson, reply, requestSource } from './http.js'
 export { Rooms } from './rooms.js'
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const guestCookie = 'll_guest'
-const encoder = new TextEncoder()
-const headers = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }
-
-function reply(result, extraHeaders) {
-  const status = typeof result.status === 'number' ? result.status : 200
-  const options = { status, headers: { ...headers, ...extraHeaders } }
-  if (result.retryAfter) options.headers['Retry-After'] = String(result.retryAfter)
-  if (status === 204) return new Response(null, options)
-  return Response.json(result.error ? { error: result.error } : result, options)
-}
-
-const fail = (status, error) => reply({ status, error })
-
-async function json(request) {
-  if (request.headers.get('Content-Type')?.split(';')[0] !== 'application/json') return null
-  const reader = request.body?.getReader()
-  if (!reader) return null
-  const decoder = new TextDecoder()
-  let size = 0
-  let raw = ''
-  for (;;) {
-    const { value, done } = await reader.read()
-    if (done) break
-    size += value.length
-    if (size > 1024) {
-      await reader.cancel()
-      return null
-    }
-    raw += decoder.decode(value, { stream: true })
-  }
-  try {
-    const data = JSON.parse(raw + decoder.decode())
-    return data && typeof data === 'object' && !Array.isArray(data) ? data : null
-  } catch {
-    return null
-  }
-}
-
-async function digest(value) {
-  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value))),
-    n => n.toString(16).padStart(2, '0')).join('')
-}
-
 async function getGuest(request) {
   const value = readCookie(request, guestCookie)
   return uuid.test(value) ? digest(value) : ''
@@ -74,11 +32,10 @@ export function createWorker(auth) {
         return reply({ signedIn: Boolean(await auth.read(request, env)) })
       }
       if (path === '/api/host/login' && method === 'POST') {
-        const ip = request.headers.get('CF-Connecting-IP') ?? 'local'
-        const source = await digest((env.HOST_SIGNING_KEY ?? '') + ':' + ip)
+        const source = await requestSource(request, env.HOST_SIGNING_KEY)
         const retryAfter = await env.ROOMS.getByName('classroom-v1').loginLimit(source)
         if (retryAfter) return reply({ status: 429, error: 'Too many sign-in attempts. Try again in a minute.', retryAfter })
-        const session = await auth.login(request, env, (await json(request))?.passphrase)
+        const session = await auth.login(request, env, (await readJson(request))?.passphrase)
         return session ? reply({ signedIn: true }, { 'Set-Cookie': session }) : fail(401, 'That host passphrase did not match.')
       }
       if (path === '/api/host/logout' && method === 'POST') {
@@ -90,7 +47,7 @@ export function createWorker(auth) {
       if (path === '/api/rooms' && method === 'POST') {
         const host = await auth.read(request, env)
         if (!host) return fail(401, 'Sign in as the host.')
-        const id = (await json(request))?.requestId
+        const id = (await readJson(request))?.requestId
         if (typeof id !== 'string' || !uuid.test(id)) return fail(400, 'A valid request ID is required.')
         return reply(await store.create(host, id))
       }
@@ -109,15 +66,14 @@ export function createWorker(auth) {
         return host ? reply(await store.transition(pin, host, action)) : fail(401, 'Sign in as the host.')
       }
       if (action === 'join') {
-        const body = await json(request)
+        const body = await readJson(request)
         const nickname = typeof body?.nickname === 'string' ? body.nickname.trim() : ''
         const joinKey = body?.joinKey
         if (!nickname || [...nickname].length > 24 || /[\p{C}]/u.test(nickname) || typeof joinKey !== 'string' || !uuid.test(joinKey)) {
           return fail(400, 'Enter a nickname of 1–24 characters.')
         }
-        const ip = request.headers.get('CF-Connecting-IP') ?? 'local'
         const [secret, source, resumeSecret] = await Promise.all([
-          digest(joinKey), digest((env.HOST_SIGNING_KEY ?? '') + ':' + ip), getGuest(request),
+          digest(joinKey), requestSource(request, env.HOST_SIGNING_KEY), getGuest(request),
         ])
         const result = await store.join(pin, secret, nickname, source, resumeSecret)
         if (result.error) return reply(result)
@@ -128,7 +84,7 @@ export function createWorker(auth) {
       if (action === 'pixels') {
         const guest = await getGuest(request)
         if (!guest) return fail(401, 'Join this room to paint.')
-        const { op, cell, colour } = await json(request) ?? {}
+        const { op, cell, colour } = await readJson(request) ?? {}
         if (typeof op !== 'string' || !uuid.test(op) || !Number.isInteger(cell) || cell < 0 || cell >= 256 ||
           !Number.isInteger(colour) || colour < 0 || colour > 6) {
           return fail(400, 'Select a valid cell and colour.')

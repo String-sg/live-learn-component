@@ -1,3 +1,5 @@
+import { cookie, readCookie } from './http.js'
+
 const encoder = new TextEncoder()
 const hours = 8
 const lifetime = hours * 60 * 60
@@ -9,16 +11,6 @@ function key(env) {
 
 function hostCookie(request) {
   return new URL(request.url).protocol === 'https:' ? '__Host-ll_host' : 'll_host'
-}
-
-export function readCookie(request, name) {
-  return request.headers.get('Cookie')?.split(/;\s*/).find(value => value.startsWith(name + '='))
-    ?.slice(name.length + 1) ?? ''
-}
-
-export function cookie(request, name, value, path, maxAge) {
-  const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : ''
-  return `${name}=${value}; Path=${path}; Max-Age=${maxAge}; HttpOnly; SameSite=Strict${secure}`
 }
 
 export async function signHost(subject, env) {
