@@ -42,7 +42,7 @@ try {
     await sleep(250)
   }
   if (!ready) throw new Error('Test Worker did not become ready.')
-  await run(['--test', 'tests/acceptance.test.js'])
+  await run(['--test', '--test-concurrency=1', 'tests/acceptance.test.js', 'tests/security.test.js'])
   await run(['node_modules/@playwright/test/cli.js', 'test'])
 } finally {
   if (server && server.exitCode === null) {

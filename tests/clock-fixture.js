@@ -2,6 +2,12 @@
 import app, { Rooms as RoomCore } from './worker.js'
 
 export class Rooms extends RoomCore {
+  async resetLimitsForTest() {
+    this.sql.exec('UPDATE request_limits SET expires_at = 0')
+    await this.alarm()
+    return this.one('SELECT count(*) AS count FROM request_limits').count
+  }
+
   async expireForTest(pin) {
     this.sql.exec('UPDATE rooms SET expires_at = ? WHERE pin = ?', Date.now() - 1, pin)
   }
@@ -17,6 +23,11 @@ export class Rooms extends RoomCore {
 
 export default {
   fetch(request, env) {
+    if (new URL(request.url).pathname === '/__test/reset-limits') {
+      if (request.headers.get('X-Fixture-Key') !== env.HOST_SIGNING_KEY) return new Response(null, { status: 404 })
+      const store = env.ROOMS.getByName('classroom-v1')
+      return store.resetLimitsForTest().then(count => new Response(null, { status: count === 0 ? 204 : 500 }))
+    }
     const match = /^\/__test\/(expire|sweep)\/(\d{8})$/.exec(new URL(request.url).pathname)
     if (!match) return app.fetch(request, env)
     if (request.headers.get('X-Fixture-Key') !== env.HOST_SIGNING_KEY) return new Response(null, { status: 404 })

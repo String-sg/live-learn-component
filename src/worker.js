@@ -9,6 +9,7 @@ const headers = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosnif
 function reply(result, extraHeaders) {
   const status = typeof result.status === 'number' ? result.status : 200
   const options = { status, headers: { ...headers, ...extraHeaders } }
+  if (result.retryAfter) options.headers['Retry-After'] = String(result.retryAfter)
   if (status === 204) return new Response(null, options)
   return Response.json(result.error ? { error: result.error } : result, options)
 }
@@ -73,6 +74,10 @@ export function createWorker(auth) {
         return reply({ signedIn: Boolean(await auth.read(request, env)) })
       }
       if (path === '/api/host/login' && method === 'POST') {
+        const ip = request.headers.get('CF-Connecting-IP') ?? 'local'
+        const source = await digest((env.HOST_SIGNING_KEY ?? '') + ':' + ip)
+        const retryAfter = await env.ROOMS.getByName('classroom-v1').loginLimit(source)
+        if (retryAfter) return reply({ status: 429, error: 'Too many sign-in attempts. Try again in a minute.', retryAfter })
         const session = await auth.login(request, env, (await json(request))?.passphrase)
         return session ? reply({ signedIn: true }, { 'Set-Cookie': session }) : fail(401, 'That host passphrase did not match.')
       }
