@@ -12,13 +12,13 @@ Baseline evidence is `src/worker.js:75` through line 77. Each request goes direc
 
 A remote client can automate passphrase guessing and consume authentication compute. The deployed high-entropy passphrase reduces guess success probability, while request admission still needs a bound.
 
-Acceptance R1 limits each source to 20 sign-in attempts per minute and returns Retry-After. Tracking uses a salted source hash. This follows the OWASP login throttling guidance. [Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#login-throttling)
+The fix is in `src/worker.js:34`, `src/rooms.js:50` and `src/rate-limits.js:2`. Acceptance R1 limits each source to 20 sign-in attempts per minute and returns Retry-After. Tracking uses a salted source hash. This follows the OWASP login throttling guidance. [Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#login-throttling)
 
 ### SEC-002 — A member can rapidly consume the shared paint allowance
 
 Baseline evidence is `src/rooms.js:126` through line 131. The room-wide 30,000-paint cap has no per-member admission bound. The local regression committed 61 unique operations in a burst from one guest.
 
-A participant with the room PIN can consume the shared allowance and prevent the rest of the class from painting. Acceptance R2 allows 60 new paints per member per ten-second window, checks existing receipts first, and permits other members to continue. The counter and mutation execute in the same synchronous storage transaction.
+A participant with the room PIN can consume the shared allowance and prevent the rest of the class from painting. The fix is in `src/rooms.js:137` and the Retry-After response in `src/http.js:7`. Acceptance R2 allows 60 new paints per member per ten-second window, checks existing receipts first, and permits other members to continue. The counter and mutation execute in the same synchronous storage transaction.
 
 ## Checked boundaries
 
