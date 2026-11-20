@@ -11,7 +11,8 @@
     "test": "playwright test",
     "test:api": "node --test tests/acceptance.test.js",
     "test:load": "node tests/load.js",
-    "test:local": "node tests/local.js"
+    "test:local": "node tests/local.js",
+    "test:upgrade": "node tests/local.js --upgrade"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",

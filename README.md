@@ -18,6 +18,10 @@ npm run test:local
 
 The command starts a fresh local Worker and SQLite store, generates disposable host credentials, runs the HTTP and Chromium tests, and tears down the store. It covers host and guest authority, isolation, simultaneous edits, retries, browser reloads and reconnects, and End. The local expiry fixture is separate from the deployed entrypoint. On a Linux runner without browser system dependencies, use `npx playwright install --with-deps chromium`.
 
+Run `npm run test:upgrade` from a full Git clone to create a room with baseline commit `13367f2`, restart the current Worker on the same local store, and verify the original host session, guest membership and operation receipt before running the full suite.
+
+[Spec Kit implementation map](specs/001-live-rooms/implementation.md) · [Review handoff](REVIEW.md) · [Security review](security_best_practices_report.md)
+
 To try the app manually, create a local `.dev.vars` file with a high-entropy `HOST_PASSPHRASE` and a different high-entropy `HOST_SIGNING_KEY`. Run `npm run dev` and open `http://127.0.0.1:8787`. Use a second browser profile or private window to join as a student.
 
 To run the API or browser checks against a deployment you own, export `BASE_URL` and `HOST_PASSPHRASE` for that deployment, then run `npm run test:api` or `npm test`. The suite creates and ends synthetic rooms.
@@ -25,6 +29,8 @@ To run the API or browser checks against a deployment you own, export `BASE_URL`
 ## Reuse the room lifecycle
 
 `src/rooms.js` owns room state. The Worker in `src/worker.js` validates commands and resolves authority before calling the store. For an existing identity provider, replace the demo adapter passed to `createWorker`. Its `read(request, env)` returns a stable verified host subject or null. The demo login and logout methods return the corresponding `Set-Cookie` value. Use your own identity provider's sign-in flow if your app already has one.
+
+The HTTP utilities live in `src/http.js`. The browser widget in `public/canvas.js` takes `(boardElement, paletteElement, onPaint)` and returns a `render(pixels, canPaint)` function. The callback receives `{ cell, colour }`. The caller owns networking, operation IDs and reconnect state.
 
 For another activity, keep room creation, membership, Start, End and expiry. Replace the canvas field and paint command with the activity's state and mutation. Keep receipt lookup and mutation in the same transaction, scoped by the room's internal ID and member. The [HTTP contract](specs/001-live-rooms/plan.md) documents the demo routes.
 
@@ -41,6 +47,6 @@ For the 100-student rehearsal, set `BASE_URL` to the isolated preview URL and su
 
 [Read the measured five-minute rehearsal](specs/001-live-rooms/rehearsal.md).
 
-The demo uses one SQLite-backed Durable Object per deployment and polls around every 1.5 seconds in an active tab. Each room caps membership at 120 and accepts up to 30,000 unique paint operations. A host can have up to 10 open rooms. Rooms stop accepting commands two hours after creation. An alarm sweeps expired demo records every 15 minutes while there is data to clean up.
+The demo uses one SQLite-backed Durable Object per deployment and polls around every 1.5 seconds in an active tab. Each room caps membership at 120 and accepts up to 30,000 unique paint operations. A host can have up to 10 open rooms. Sign-in admits 20 attempts per source per minute. Each member can submit 60 new paints per ten-second window. Replayed committed operations retain their original receipt and bypass that paint counter. Rooms stop accepting commands two hours after creation. An alarm sweeps expired demo records every 15 minutes while there is data to clean up.
 
 The classroom flow was informed by [String Bingo PR #86](https://github.com/String-sg/bingo-string/pull/86).
