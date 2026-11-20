@@ -38,7 +38,7 @@ npm run test:upgrade
 
 The upgrade run boots the baseline Worker, creates an active synthetic room and paint receipt, restarts current source on the same SQLite store, and checks the original credentials and receipt. It then executes six HTTP tests and the independent desktop/mobile Chromium flow.
 
-For a fresh-store run, use `npm run test:local`. On Linux, install browser system dependencies with `npx playwright install --with-deps chromium`. The public workflow uses the upgrade run.
+For a fresh-store run, use `npm run test:local`. On Linux, install browser system dependencies with `npx playwright install --with-deps chromium`. The public workflow uses the upgrade run on pull requests and main-branch pushes.
 
 [Verification results](specs/002-security-refactor/verification.md) include the 100-student, five-minute preview rehearsal. Join p95 was 405 ms, paint p95 was 244 ms and the slowest End observation was 1,655 ms. The run recorded zero unexpected errors.
 
