@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -23,31 +23,56 @@ async function run(args) {
 }
 
 let server, serverExit
+
+async function startServer() {
+  server = node(['node_modules/wrangler/bin/wrangler.js', 'dev', '--cwd', dir, '--ip', '127.0.0.1',
+    '--port', '8788', '--inspector-port', '0'])
+  serverExit = once(server, 'exit')
+  for (let attempt = 0; attempt < 80; attempt++) {
+    if (server.exitCode !== null) throw new Error('Test Worker exited before it was ready.')
+    try {
+      const response = await fetch(base + '/api/host', { signal: AbortSignal.timeout(1000) })
+      if (response.ok) return
+    } catch {}
+    await sleep(250)
+  }
+  throw new Error('Test Worker did not become ready.')
+}
+
+async function stopServer() {
+  if (server && server.exitCode === null) {
+    server.kill()
+    await serverExit
+  }
+}
+
 try {
   await Promise.all(['src', 'public'].map(path => cp(path, join(dir, path), { recursive: true })))
   const config = (await readFile('wrangler.jsonc', 'utf8')).replace('src/worker.js', 'src/clock-fixture.js')
   await writeFile(join(dir, 'wrangler.jsonc'), config)
   await cp('tests/clock-fixture.js', join(dir, 'src/clock-fixture.js'))
   await writeFile(join(dir, '.dev.vars'), Object.entries(secrets).map(pair => pair.join('=')).join('\n'), { mode: 0o600 })
-  server = node(['node_modules/wrangler/bin/wrangler.js', 'dev', '--cwd', dir, '--ip', '127.0.0.1',
-    '--port', '8788', '--inspector-port', '0'])
-  serverExit = once(server, 'exit')
-  let ready = false
-  for (let i = 0; i < 80; i++) {
-    if (server.exitCode !== null) throw new Error('Test Worker exited before it was ready.')
-    try {
-      const response = await fetch(base + '/api/host', { signal: AbortSignal.timeout(1000) })
-      if (response.ok) { ready = true; break }
-    } catch {}
-    await sleep(250)
+  if (process.argv.includes('--upgrade')) {
+    const baseline = '13367f2a6fe2125b3303f68eb295d515b9d7d600'
+    for (const file of ['worker.js', 'host-auth.js', 'rooms.js']) {
+      await writeFile(join(dir, 'src', file), execFileSync('git', ['show', baseline + ':src/' + file]))
+    }
+    // Start the original entrypoint to create real pre-change data.
+    await writeFile(join(dir, 'wrangler.jsonc'), await readFile('wrangler.jsonc'))
+    await startServer()
+    const { prepareUpgrade, verifyUpgrade } = await import('./upgrade.js')
+    const state = await prepareUpgrade(base, secrets.HOST_PASSPHRASE)
+    await stopServer()
+    await cp('src', join(dir, 'src'), { recursive: true })
+    await writeFile(join(dir, 'wrangler.jsonc'), config)
+    await startServer()
+    await verifyUpgrade(state)
+  } else {
+    await startServer()
   }
-  if (!ready) throw new Error('Test Worker did not become ready.')
-  await run(['--test', 'tests/acceptance.test.js'])
+  await run(['--test', '--test-concurrency=1', 'tests/acceptance.test.js', 'tests/security.test.js'])
   await run(['node_modules/@playwright/test/cli.js', 'test'])
 } finally {
-  if (server && server.exitCode === null) {
-    server.kill()
-    await serverExit
-  }
+  await stopServer()
   await rm(dir, { recursive: true, force: true })
 }

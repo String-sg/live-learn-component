@@ -1,5 +1,7 @@
+import { api, roomPath } from './api.js'
+import { createCanvas } from './canvas.js'
+
 const $ = id => document.getElementById(id)
-const colours = ['Erase', 'Lime', 'Coral', 'Sky', 'Lilac', 'Gold', 'Chalk']
 const stages = { waiting: 'Waiting room', live: 'Live activity', ended: 'Room ended' }
 const pinPattern = /^\d{8}$/
 
@@ -10,64 +12,14 @@ let timer
 let version = 0
 let disconnected = false
 let pending
-let selectedColour = 1
-let selectedCell = 0
 
-function pixel(element, value) {
-  element.dataset.colour = value
-  element.style.setProperty('--pixel', `var(--c${value})`)
-}
-
-const cells = Array.from({ length: 256 }, (_, index) => {
-  const cell = document.createElement('button')
-  cell.type = 'button'
-  cell.className = 'pixel'
-  cell.tabIndex = index === 0 ? 0 : -1
-  cell.dataset.cell = index
-  cell.setAttribute('aria-label', cellLabel(index, '0'))
-  $('board').append(cell)
-  return cell
+const renderCanvas = createCanvas($('board'), $('palette'), paint => {
+  if (pending) return
+  pending = { data: { ...paint, op: crypto.randomUUID() } }
+  sendPaint(version)
 })
-
-const swatches = colours.map((name, index) => {
-  const button = document.createElement('button')
-  button.type = 'button'
-  button.className = 'swatch'
-  button.setAttribute('aria-label', name)
-  button.title = name
-  button.textContent = index === 0 ? '×' : ''
-  pixel(button, index)
-  button.addEventListener('click', () => {
-    selectedColour = index
-    updateSwatches()
-  })
-  $('palette').append(button)
-  return button
-})
-updateSwatches()
-
-function cellLabel(index, value) {
-  return `Row ${Math.floor(index / 16) + 1}, column ${index % 16 + 1}, ${value === '0' ? 'empty' : colours[value]}`
-}
-
-function updateSwatches() {
-  swatches.forEach((button, index) => button.setAttribute('aria-pressed', String(index === selectedColour)))
-}
-
-async function api(path, body) {
-  const options = { signal: AbortSignal.timeout(6500) }
-  if (body) Object.assign(options, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  })
-  const response = await fetch('/api' + path, options)
-  if (response.status === 204) return null
-  const data = await response.json()
-  if (!response.ok) throw Object.assign(new Error(data.error), { status: response.status })
-  return data
-}
 
 const say = message => { $('notice').textContent = message }
-const roomPath = (pin, action = '') => '/rooms/' + pin + action
 
 function syncUrl(param, pin) {
   const url = new URL(location.href)
@@ -119,14 +71,7 @@ function renderRoom() {
   $('paint-tools').hidden = !canPaint
   if (canPaint) $('board').setAttribute('aria-describedby', 'board-help')
   else $('board').removeAttribute('aria-describedby')
-  cells.forEach((cell, index) => {
-    const value = room.pixels[index]
-    if (cell.dataset.colour !== value) {
-      pixel(cell, value)
-      cell.setAttribute('aria-label', cellLabel(index, value))
-    }
-    cell.setAttribute('aria-disabled', String(!canPaint))
-  })
+  renderCanvas(room.pixels, canPaint)
 }
 
 function enter(data) {
@@ -214,32 +159,6 @@ async function sendPaint(current) {
     }
   }
 }
-
-$('board').addEventListener('click', event => {
-  const cell = event.target.closest('button[data-cell]')
-  if (!cell) return
-  cells[selectedCell].tabIndex = -1
-  selectedCell = Number(cell.dataset.cell)
-  cell.tabIndex = 0
-  if (role !== 'guest' || room?.status !== 'live' || pending) return
-  pending = { data: { op: crypto.randomUUID(), cell: selectedCell, colour: selectedColour } }
-  sendPaint(version)
-})
-
-$('board').addEventListener('keydown', event => {
-  const { key } = event
-  const index = Number(event.target.dataset.cell)
-  const moves = { ArrowUp: -16, ArrowDown: 16, ArrowLeft: -1, ArrowRight: 1 }
-  if (!(key in moves)) return
-  event.preventDefault()
-  if ((key === 'ArrowLeft' && index % 16 === 0) || (key === 'ArrowRight' && index % 16 === 15)) return
-  const next = cells[index + moves[key]]
-  if (!next) return
-  cells[selectedCell].tabIndex = -1
-  selectedCell = index + moves[key]
-  next.tabIndex = 0
-  next.focus()
-})
 
 async function action(button, work) {
   if (button.disabled) return

@@ -10,10 +10,10 @@ The Worker verifies the host session and scopes guest credentials. The internal 
 
 ## Layout
 
-- `src/worker.js` validates HTTP input and resolves the caller.
+- `src/worker.js` validates commands and resolves the caller. `src/http.js` owns bounded JSON, cookies, hashing and replies.
 - `src/host-auth.js` provides a replaceable demo host sign-in and resolver.
 - `src/rooms.js` owns lifecycle, membership, board snapshots and retry receipts.
-- `public/` renders the host and student flows. The canvas is also the visual on the entry screen.
+- `public/app.js` owns host/student navigation and reconnect state. `public/canvas.js` owns the reusable canvas widget. `public/api.js` owns browser requests.
 - `tests/` exercises the same public routes from independent clients.
 
 ## Contracts
@@ -29,3 +29,5 @@ The Worker verifies the host session and scopes guest credentials. The internal 
 ## Validation and rollout
 
 Run the HTTP and browser suites on local storage. Verify a 300-second load rehearsal against the isolated preview. Push public source and check GitHub Actions. Publish the demo with distinct production secrets and verify a synthetic host plus independent guest flow.
+
+[Requirement and test map](implementation.md) · [Review follow-up](../002-security-refactor/spec.md)

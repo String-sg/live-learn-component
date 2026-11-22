@@ -1,4 +1,5 @@
 import { DurableObject } from 'cloudflare:workers'
+import { takeLimit } from './rate-limits.js'
 
 const ttl = 2 * 60 * 60 * 1000
 const sweepInterval = 15 * 60 * 1000
@@ -33,6 +34,9 @@ export class Rooms extends DurableObject {
         cell INTEGER NOT NULL, colour INTEGER NOT NULL, revision INTEGER NOT NULL,
         PRIMARY KEY (room_id, guest, op)
       );
+      CREATE TABLE IF NOT EXISTS request_limits (
+        key TEXT PRIMARY KEY, expires_at INTEGER NOT NULL, attempts INTEGER NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS join_failures (
         source TEXT PRIMARY KEY, window INTEGER NOT NULL, attempts INTEGER NOT NULL
       );
@@ -41,6 +45,11 @@ export class Rooms extends DurableObject {
 
   one(query, ...args) {
     return this.sql.exec(query, ...args).toArray()[0]
+  }
+
+  async loginLimit(source) {
+    await this.scheduleSweep()
+    return takeLimit(this.sql, 'login:' + source, 20, 60000)
   }
 
   async create(owner, requestId) {
@@ -125,6 +134,8 @@ export class Rooms extends DurableObject {
       }
       if (room.status !== 'live') return error(409, room.status === 'waiting' ? 'The host has not started yet.' : 'This room has ended.')
       if (room.paints >= paintLimit) return error(429, 'This room has reached its paint limit.')
+      const retryAfter = takeLimit(this.sql, 'paint:' + room.id + ':' + secret, 60, 10000)
+      if (retryAfter) return { ...error(429, 'Too many paints. Wait a moment and try again.'), retryAfter }
       const pixels = room.pixels.slice(0, cell) + colour + room.pixels.slice(cell + 1)
       const revision = room.revision + 1
       this.sql.exec('UPDATE rooms SET pixels = ?, revision = ?, paints = paints + 1 WHERE id = ?', pixels, revision, room.id)
@@ -151,8 +162,10 @@ export class Rooms extends DurableObject {
   async alarm() {
     const now = Date.now()
     this.sql.exec('DELETE FROM rooms WHERE expires_at <= ?', now)
+    this.sql.exec('DELETE FROM request_limits WHERE expires_at <= ?', now)
     this.sql.exec('DELETE FROM join_failures WHERE window < ?', Math.floor(now / 60000))
-    if (this.one('SELECT 1 FROM rooms LIMIT 1') || this.one('SELECT 1 FROM join_failures LIMIT 1')) {
+    if (this.one('SELECT 1 FROM rooms LIMIT 1') || this.one('SELECT 1 FROM join_failures LIMIT 1') ||
+      this.one('SELECT 1 FROM request_limits LIMIT 1')) {
       await this.ctx.storage.setAlarm(now + sweepInterval)
     }
   }
