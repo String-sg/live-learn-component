@@ -1,10 +1,32 @@
 # Live Learn Component
 
+[![README hits](https://hits.sh/github.com/String-sg/live-learn-component.svg?label=README%20hits&color=4c7f40)](https://hits.sh/github.com/String-sg/live-learn-component/)
+[![GitHub stars](https://img.shields.io/github/stars/String-sg/live-learn-component?style=flat&label=stars)](https://github.com/String-sg/live-learn-component/stargazers)
+[![Main CI](https://github.com/String-sg/live-learn-component/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/String-sg/live-learn-component/actions/workflows/test.yml)
+
 Host-led rooms for browser activities, with a shared pixel canvas as the example. A host signs in and shares an eight-digit PIN. Students join with nicknames, wait for Start, and paint on the same canvas. They keep their place if they reload in the same browser.
 
 [Live demo](https://live-learn-component.leekahhow.workers.dev) · [GitHub Actions](https://github.com/String-sg/live-learn-component/actions/workflows/test.yml) · [Spec and acceptance cases](specs/001-live-rooms/spec.md)
 
 The public demo is for synthetic activity. Use made-up nicknames. The deployment operator provisions host access.
+
+The README hit badge counts badge requests; image caching affects the count. It does not measure unique visitors or app usage.
+
+## UI screens
+
+Captured from the isolated preview with three synthetic students. The pictured room has been closed.
+
+**Student entry · desktop**
+
+![Student entry with room PIN and nickname fields beside the sample pixel canvas](docs/screenshots/join-desktop.png)
+
+| Host waiting room · desktop | Shared canvas · desktop |
+| --- | --- |
+| ![Host waiting room with three students joined and a Start activity button](docs/screenshots/host-waiting-desktop.png) | ![Host view of the shared canvas after students paint a smile and stars](docs/screenshots/shared-canvas-desktop.png) |
+
+**Student canvas · mobile**
+
+<img src="docs/screenshots/student-mobile.png" alt="Mobile student view with colour palette and the shared pixel canvas" width="390">
 
 ## Run and test
 
